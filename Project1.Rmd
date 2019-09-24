@@ -1,0 +1,74 @@
+---
+title: "CA Student Vaccination Information"
+output: 
+ flexdashboard::flex_dashboard:
+   orientation: columns
+   source_code: embed
+runtime: shiny
+---
+
+```{r context="setup", include=FALSE}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+```
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r context="render"}
+
+
+
+```
+
+Outputs
+-----------------------------------------------------------------------
+
+### Data Table
+
+```{r context="server"}
+
+
+```
+
+```{r context="render"}
+
+
+```
+
+### Plot 1
+
+```{r context="server"}
+
+
+```
+
+```{r context="render"}
+
+
+```
+
+### Plot 2
+
+```{r context="server"}
+
+
+```
+
+```{r context="render"}
+
+
+```
+
+### Plot 3
+
+```{r context="server"}
+
+
+```
+
+```{r context="render"}
+
+
+```
