@@ -13,12 +13,29 @@ library(ggplot2)
 library(dplyr)
 ```
 
+```{r}
+vaccine_df <- read.csv(file="StudentData_clean.csv", header=TRUE, sep=",")
+```
+
+
 Inputs {.sidebar}
 -----------------------------------------------------------------------
 
 ```{r context="render"}
+numericInput(inputId = "n_samp", 
+             label = "Sample size:", 
+             min = 1, max = nrow(vaccine_df),
+             value = 50)
 
 
+```
+
+
+```{r context="render"}
+vaccine_sample <- reactive({
+  req(input$n_samp)
+  sample_n(vaccine_df, input$n_samp)
+})
 
 ```
 
@@ -28,19 +45,20 @@ Outputs
 ### Data Table
 
 ```{r context="server"}
-
-
+output$grantstable <- DT::renderDataTable({
+  DT::datatable(vaccine_sample(), 
+              options = list(pageLength = 10), 
+              rownames = FALSE)})
 ```
 
 ```{r context="render"}
-
-
+DT::dataTableOutput(outputId = "grantstable")
 ```
 
 ### Plot 1
 
 ```{r context="server"}
-
+ggplot(data, aes(x=Polio, fill=schoolType)) + geom_density(alpha=.15)
 
 ```
 
