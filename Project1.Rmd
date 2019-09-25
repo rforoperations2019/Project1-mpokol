@@ -25,7 +25,7 @@ Inputs {.sidebar}
 numericInput(inputId = "n_samp", 
              label = "Sample size:", 
              min = 1, max = nrow(vaccine_df),
-             value = 50)
+             value = 75)
 
 
 ```
@@ -45,48 +45,61 @@ Outputs
 ### Data Table
 
 ```{r context="server"}
-output$grantstable <- DT::renderDataTable({
+output$DataTable <- DT::renderDataTable({
   DT::datatable(vaccine_sample(), 
               options = list(pageLength = 10), 
               rownames = FALSE)})
 ```
 
 ```{r context="render"}
-DT::dataTableOutput(outputId = "grantstable")
+DT::dataTableOutput("DataTable")
 ```
 
 ### Plot 1
 
 ```{r context="server"}
-ggplot(data, aes(x=Polio, fill=schoolType)) + geom_density(alpha=.15)
+output$Density <- renderPlot({
+  ggplot(vaccine_sample(), aes(x=Polio, fill=schoolType)) + geom_density(alpha=.15)
+})
 
 ```
 
 ```{r context="render"}
-
-
+plotOutput("Density")
 ```
 
 ### Plot 2
-
+AAAAAAAAHHHHHHHHHHHHHHH
+THIS ISN'T WORKING what a tragedy :*(
 ```{r context="server"}
-
+output$Lines <- renderPlot({
+  ggplot(vaccine_sample(), aes(x=year)) + 
+    geom_line(aes(y=MMR, group=SCHOOL, col="MMR")) + 
+    geom_line(aes(y=DTP, group=SCHOOL, col="DTP")) +
+    geom_line(aes(y=Polio, group=SCHOOL, col="Polio")) + 
+    geom_line(aes(y=PBE, group=SCHOOL, col="PBE")) + 
+    geom_line(aes(y=PME, group=SCHOOL, col="PME"))
+})
 
 ```
 
 ```{r context="render"}
-
-
+plotOutput("Lines")
 ```
 
 ### Plot 3
 
 ```{r context="server"}
-
-
+output$Bubbles <- renderPlot({
+  ggplot(vaccine_sample(), aes(x=year, size=n)) + 
+    geom_jitter(aes( y=MMR, col="MMR"), width = .5, alpha=.2) +
+    geom_jitter(aes( y=DTP, col="DTP"), width = .5, alpha=.2) +
+    geom_jitter(aes( y=Polio, col="Polio"), width = .5, alpha=.2) +
+    geom_jitter(aes( y=PBE, col="PBE"), width = .5, alpha=.2) +
+    geom_jitter(aes( y=PME, col="PME"), width = .5, alpha=.2)
+})
 ```
 
 ```{r context="render"}
-
-
+plotOutput("Bubbles")
 ```
