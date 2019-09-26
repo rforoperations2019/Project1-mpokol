@@ -2,8 +2,10 @@
 title: "CA Student Vaccination Information"
 output: 
  flexdashboard::flex_dashboard:
-   orientation: columns
+   orientation: rows
+   vertical_layout: scroll
    source_code: embed
+   theme: lumen
 runtime: shiny
 ---
 
@@ -11,6 +13,8 @@ runtime: shiny
 library(shiny)
 library(ggplot2)
 library(dplyr)
+library(flexdashboard)
+library(plotly)
 ```
 
 ```{r}
@@ -18,18 +22,30 @@ vaccine_df <- read.csv(file="StudentData_clean.csv", header=TRUE, sep=",")
 ```
 
 
+Page 1
+=======================================================================
+
+
 Inputs {.sidebar}
 -----------------------------------------------------------------------
 
-```{r context="render"}
-numericInput(inputId = "n_samp", 
-             label = "Sample size:", 
-             min = 1, max = nrow(vaccine_df),
-             value = 75)
+### Avg. Students per School
 
-
+```{r}
+renderValueBox({
+  n_subset <- school_type_subset()
+  avg_students <- mean(n_subset$n)
+  valueBox(round(avg_students))
+})
 ```
 
+
+```{r context="render"}
+numericInput(inputId = "n_samp", 
+             label = "Sample Size:", 
+             min = 1, max = nrow(vaccine_df),
+             value = 100)
+```
 
 ```{r context="render"}
 vaccine_sample <- reactive({
@@ -39,53 +55,129 @@ vaccine_sample <- reactive({
 
 ```
 
-Outputs
------------------------------------------------------------------------
+```{r context="render"}
+checkboxGroupInput(inputId = 'school_type',
+                   label = "School Type:",
+                   choices = c("Public" = "PUBLIC",
+                               "Private" = "PRIVATE"),
+                   selected = c("PUBLIC", "PRIVATE"))
+```
 
-### Data Table
-
-```{r context="server"}
-output$DataTable <- DT::renderDataTable({
-  DT::datatable(vaccine_sample(), 
-              options = list(pageLength = 10), 
-              rownames = FALSE)})
+```{r}
+school_type_subset <- reactive({
+  vaccine_sample() %>%
+    filter(
+      schoolType %in% input$school_type
+    )
+})
 ```
 
 ```{r context="render"}
-DT::dataTableOutput("DataTable")
+selectInput(inputId = 'vacc_type',
+                   label = "Vaccination:",
+                   choices = c("MMR" = "MMR",
+                               "DTP" = "DTP",
+                               "Polio" = "Polio",
+                               "PBE" = "PBE",
+                               "PME" = "PME"),
+                   selected = "MMR")
 ```
+
+
+
+
+
+Row {data-height=150}
+-----------------------------------------------------------------------
+
+
+### Avg. w MMR Vaccine
+
+```{r}
+renderValueBox({
+  n_subset <- school_type_subset()
+  avg_MMR <- mean(n_subset$MMR)
+  valueBox(scales::percent(avg_MMR/100))
+})
+```
+
+### Avg. w DTP Vaccine
+
+```{r}
+renderValueBox({
+  n_subset <- school_type_subset()
+  avg_DTP <- mean(n_subset$DTP)
+  valueBox(scales::percent(avg_DTP/100))
+})
+```
+
+### Avg. w Polio Vaccine
+
+```{r}
+renderValueBox({
+  n_subset <- school_type_subset()
+  avg_Polio <- mean(n_subset$Polio)
+  valueBox(scales::percent(avg_Polio/100))
+})
+```
+
+### Avg. w PBE Vaccine
+
+```{r}
+renderValueBox({
+  n_subset <- school_type_subset()
+  avg_PBE <- mean(n_subset$PBE)
+  valueBox(scales::percent(avg_PBE/100))
+})
+```
+
+### Avg. w PME Vaccine
+
+```{r}
+renderValueBox({
+  n_subset <- school_type_subset()
+  avg_PME <- mean(n_subset$PME)
+  valueBox(scales::percent(avg_PME/100))
+})
+```
+
+
+Row {.tabset .tabset-fade data-height=350}
+-----------------------------------------------------------------------
 
 ### Plot 1
 
 ```{r context="server"}
-output$Density <- renderPlot({
-  ggplot(vaccine_sample(), aes(x=Polio, fill=schoolType)) + geom_density(alpha=.15)
+output$Density <- renderPlotly({
+  ggplotly(
+    ggplot(school_type_subset(), aes(x=Polio, fill=schoolType)) + geom_density(alpha=.15)
+  )
 })
 
 ```
 
 ```{r context="render"}
-plotOutput("Density")
+plotlyOutput("Density")
 ```
 
 ### Plot 2
-AAAAAAAAHHHHHHHHHHHHHHH
-THIS ISN'T WORKING what a tragedy :*(
+
 ```{r context="server"}
-output$Lines <- renderPlot({
-  ggplot(vaccine_sample(), aes(x=year)) + 
-    geom_line(aes(y=MMR, group=SCHOOL, col="MMR")) + 
-    geom_line(aes(y=DTP, group=SCHOOL, col="DTP")) +
-    geom_line(aes(y=Polio, group=SCHOOL, col="Polio")) + 
-    geom_line(aes(y=PBE, group=SCHOOL, col="PBE")) + 
-    geom_line(aes(y=PME, group=SCHOOL, col="PME"))
-})
+eventReactive(input$vacc_type, {output$Violin <- renderPlot({
+  req(input$vacc_type)
+  ggplot(school_type_subset(), aes(x=schoolType, y=input$vacc_type, fill=schoolType)) + geom_violin() + guides(fill=FALSE)
+}) })
 
 ```
 
 ```{r context="render"}
-plotOutput("Lines")
+plotOutput("Violin")
 ```
+
+
+
+Row {data-height=350}
+-----------------------------------------------------------------------
 
 ### Plot 3
 
@@ -102,4 +194,23 @@ output$Bubbles <- renderPlot({
 
 ```{r context="render"}
 plotOutput("Bubbles")
+```
+
+
+Page 2
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### Data Table
+
+```{r context="server"}
+output$DataTable <- DT::renderDataTable({
+  DT::datatable(school_type_subset(), 
+              options = list(pageLength = 10), 
+              rownames = FALSE)})
+```
+
+```{r context="render"}
+DT::dataTableOutput("DataTable")
 ```
