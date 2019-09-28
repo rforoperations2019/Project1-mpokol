@@ -1,5 +1,5 @@
 ---
-title: "CA Student Vaccination Information"
+title: "California Vaccinations in Kindergarten Students"
 output: 
  flexdashboard::flex_dashboard:
    orientation: rows
@@ -22,23 +22,8 @@ vaccine_df <- read.csv(file="StudentData_clean.csv", header=TRUE, sep=",")
 ```
 
 
-Page 1
-=======================================================================
-
-
 Inputs {.sidebar}
------------------------------------------------------------------------
-
-### Avg. Students per School
-
-```{r}
-renderValueBox({
-  n_subset <- school_type_subset()
-  avg_students <- mean(n_subset$n)
-  valueBox(round(avg_students))
-})
-```
-
+=======================================================================
 
 ```{r context="render"}
 numericInput(inputId = "n_samp", 
@@ -58,159 +43,240 @@ vaccine_sample <- reactive({
 ```{r context="render"}
 checkboxGroupInput(inputId = 'school_type',
                    label = "School Type:",
-                   choices = c("Public" = "PUBLIC",
-                               "Private" = "PRIVATE"),
-                   selected = c("PUBLIC", "PRIVATE"))
+                   choices = c('Public' = 'PUBLIC',
+                               'Private' = 'PRIVATE'),
+                   selected = c('PUBLIC', 'PRIVATE'))
 ```
 
 ```{r}
 school_type_subset <- reactive({
   vaccine_sample() %>%
-    filter(
-      schoolType %in% input$school_type
-    )
+    filter(Type %in% input$school_type)
 })
 ```
+
+
+Vaccination Definitions:
+
+* MMR: measles, mumps, and rubella 
+* DTP: diphtheria, tetanus, and pertussis
+* Polio: polio
+* PBE: personanl belief exemption
+* PME: personal medical exemptions
+
 
 ```{r context="render"}
 selectInput(inputId = 'vacc_type',
                    label = "Vaccination:",
-                   choices = c("MMR" = "MMR",
-                               "DTP" = "DTP",
-                               "Polio" = "Polio",
-                               "PBE" = "PBE",
-                               "PME" = "PME"),
-                   selected = "MMR")
+                   choices = c('MMR' = 'MMR',
+                               'DTP' = 'DTP',
+                               'Polio' = 'Polio',
+                               'Personal Belief Exemption' = 'PBE',
+                               'Medical Exemption' = 'PME'),
+                   selected = 'MMR')
 ```
 
 
+Note: Herd Imumnity is the resistance to the spread of a contagious disease within a population that results if a sufficiently high proportion of individuals are immune to the disease, especially through vaccination.  The herd immunity rate for measles of 95% was used in determining the gauge for "sucess."
 
 
+Vaccination-Specific Analysis
+=======================================================================
 
-Row {data-height=150}
+
+Row {data-height=175}
 -----------------------------------------------------------------------
 
-
-### Avg. w MMR Vaccine
-
-```{r}
-renderValueBox({
-  n_subset <- school_type_subset()
-  avg_MMR <- mean(n_subset$MMR)
-  valueBox(scales::percent(avg_MMR/100))
-})
-```
-
-### Avg. w DTP Vaccine
+### Average Number of Students per School
 
 ```{r}
 renderValueBox({
-  n_subset <- school_type_subset()
-  avg_DTP <- mean(n_subset$DTP)
-  valueBox(scales::percent(avg_DTP/100))
-})
-```
-
-### Avg. w Polio Vaccine
-
-```{r}
-renderValueBox({
-  n_subset <- school_type_subset()
-  avg_Polio <- mean(n_subset$Polio)
-  valueBox(scales::percent(avg_Polio/100))
-})
-```
-
-### Avg. w PBE Vaccine
-
-```{r}
-renderValueBox({
-  n_subset <- school_type_subset()
-  avg_PBE <- mean(n_subset$PBE)
-  valueBox(scales::percent(avg_PBE/100))
-})
-```
-
-### Avg. w PME Vaccine
-
-```{r}
-renderValueBox({
-  n_subset <- school_type_subset()
-  avg_PME <- mean(n_subset$PME)
-  valueBox(scales::percent(avg_PME/100))
+  avg_students <- mean(school_type_subset()[, 'Students'])
+  valueBox(round(avg_students),  icon='fa-pencil')
 })
 ```
 
 
-Row {.tabset .tabset-fade data-height=350}
+### Percentage Vaccinated based on Herd Immunity Requirements
+
+```{r}
+renderGauge({
+  avg_vacc <- mean(school_type_subset()[,input$vacc_type], na.rm = TRUE)
+  gauge(round(avg_vacc), min = 0, max = 100, symbol = '%', gaugeSectors(
+    success = c(95, 100), warning = c(90, 94), danger = c(0, 89)))
+    })
+```
+
+
+Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
-### Plot 1
+### Percent Vaccinated by School Type (1)
 
 ```{r context="server"}
 output$Density <- renderPlotly({
   ggplotly(
-    ggplot(school_type_subset(), aes(x=Polio, fill=schoolType)) + geom_density(alpha=.15)
-  )
+    ggplot(school_type_subset(), 
+           aes_string(x=input$vacc_type, fill='Type')) + 
+      geom_density(alpha=.15) +
+      labs(x="% of Childen Vaccinated",
+           y="",
+           fill="School Type",
+           title="Percent of Kindergarteners Vaccinated"), 
+    tooltip = c('x', 'fill')
+    )
 })
+
 
 ```
 
 ```{r context="render"}
-plotlyOutput("Density")
+plotlyOutput('Density')
 ```
 
-### Plot 2
+
+### Percent Vaccinated by School Type (2)
 
 ```{r context="server"}
-eventReactive(input$vacc_type, {output$Violin <- renderPlot({
+
+output$Violin <- renderPlotly({
   req(input$vacc_type)
-  ggplot(school_type_subset(), aes(x=schoolType, y=input$vacc_type, fill=schoolType)) + geom_violin() + guides(fill=FALSE)
-}) })
-
+  ggplotly(
+    ggplot(school_type_subset(), aes_string(x='Type',
+                                            y=input$vacc_type,
+                                            fill='Type')) +
+      geom_violin() +
+      guides(fill=FALSE) +
+      labs(x="% of Childen Vaccinated",
+           y="",
+           fill="Type",
+           title="Percent of Kindergarteners Vaccinated"), 
+    tooltip = c('y', 'x')
+    )
+  })
 ```
 
 ```{r context="render"}
-plotOutput("Violin")
+plotlyOutput('Violin')
 ```
 
-
-
-Row {data-height=350}
------------------------------------------------------------------------
-
-### Plot 3
-
-```{r context="server"}
-output$Bubbles <- renderPlot({
-  ggplot(vaccine_sample(), aes(x=year, size=n)) + 
-    geom_jitter(aes( y=MMR, col="MMR"), width = .5, alpha=.2) +
-    geom_jitter(aes( y=DTP, col="DTP"), width = .5, alpha=.2) +
-    geom_jitter(aes( y=Polio, col="Polio"), width = .5, alpha=.2) +
-    geom_jitter(aes( y=PBE, col="PBE"), width = .5, alpha=.2) +
-    geom_jitter(aes( y=PME, col="PME"), width = .5, alpha=.2)
-})
-```
-
-```{r context="render"}
-plotOutput("Bubbles")
-```
-
-
-Page 2
-=======================================================================
 
 Row
 -----------------------------------------------------------------------
-### Data Table
+
+### Percent Vaccinated by County
+
+```{r context="server"}
+output$County <- renderPlotly({
+  ggplotly(
+    ggplot(school_type_subset(), aes_string(x='County', 
+                                            y=input$vacc_type, 
+                                            fill='County')) + 
+      geom_boxplot() + 
+      guides(fill=FALSE) +
+      theme(axis.text.x = element_text(angle=65))
+  )
+})
+```
+
+```{r context="render"}
+plotlyOutput('County')
+```
+
+
+Overall Vaccination Data
+=======================================================================
+
+Row {data-height=175}
+-----------------------------------------------------------------------
+
+### Average Number of Students with MMR Vaccination
+
+```{r}
+renderValueBox({
+  avg_MMR <- mean(school_type_subset()$MMR)
+  valueBox(scales::percent(avg_MMR/100), icon='fa-syringe', color='orange')
+})
+```
+
+
+### Average Number of Students with DTP Vaccination
+
+```{r}
+renderValueBox({
+  avg_DTP <- mean(school_type_subset()$DTP)
+  valueBox(scales::percent(avg_DTP/100), icon='fa-syringe', color='red')
+})
+```
+
+
+### Average Number of Students with Polio Vaccination
+
+```{r}
+renderValueBox({
+  avg_Polio <- mean(school_type_subset()$Polio)
+  valueBox(scales::percent(avg_Polio/100), icon='fa-syringe', color='fuchsia')
+})
+```
+
+
+### Average Number of Students with Personal Belief Exemption (PBE)
+
+```{r}
+renderValueBox({
+  avg_PBE <- mean(school_type_subset()$PBE)
+  valueBox(scales::percent(avg_PBE/100), icon='fa-syringe', color='green')
+})
+```
+
+
+### Average Number of Students with Medical Exemption (PME)
+
+```{r}
+renderValueBox({
+  avg_PME <- mean(school_type_subset()$PME)
+  valueBox(scales::percent(avg_PME/100), icon='fa-syringe', color='blue')
+})
+```
+
+
+Row {.tabset .tabset-fade data-height=700}
+-----------------------------------------------------------------------
+
+### Percent of Children Vaccinated by Year
+
+```{r context="server"}
+output$Bubbles <- renderPlotly({
+  ggplotly(
+    ggplot(school_type_subset(), aes(x=Year, size=Students)) +
+      geom_jitter(aes(y=MMR, col='MMR'), width=.5, alpha=.5) +
+      geom_jitter(aes(y=DTP, col='DTP'), width=.5, alpha=.5) +
+      geom_jitter(aes(y=Polio, col='Polio'), width=.5, alpha=.5) +
+      geom_jitter(aes(y=PBE, col='PBE'), width=.5, alpha=.5) +
+      geom_jitter(aes(y=PME, col='PME'), width=.5, alpha=.5) +
+      labs(x="Year",
+           y="% of Childen Vaccinated",
+           fill="School Type",
+           title="Kindergarteners Vaccinated by Year"),
+    tooltip = c("y", "x", 'size') 
+    )
+  })
+```
+
+```{r context="render"}
+plotlyOutput('Bubbles')
+```
+
+
+### Kindergarten Vacination Data Table
 
 ```{r context="server"}
 output$DataTable <- DT::renderDataTable({
   DT::datatable(school_type_subset(), 
-              options = list(pageLength = 10), 
-              rownames = FALSE)})
+                options=list(pageLength=10), 
+                rownames=FALSE)})
 ```
 
 ```{r context="render"}
-DT::dataTableOutput("DataTable")
+DT::dataTableOutput('DataTable')
 ```

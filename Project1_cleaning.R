@@ -8,4 +8,8 @@ vaccine_df$PME <- round((vaccine_df$nPME/vaccine_df$n * 100), digits=2)
 
 vaccine_df <- vaccine_df[-c(6:10)]
 
+names(vaccine_df) <- c("Type", "County", "Name", 
+                       "Code", "Students", "Year", 
+                       "MMR", "DTP", "Polio", "PBE", "PME")
+
 write.csv(vaccine_df, 'StudentData_clean.csv')
